@@ -1,0 +1,15 @@
+# Node & Rust
+node_modules/
+rust/target/
+rust/dist/
+rust/build/
+*.log
+
+# Wallets and sensitive files
+*.wallet.json
+*.json
+
+# OS & editor clutter
+.DS_Store
+*.swp
+.vscode/
