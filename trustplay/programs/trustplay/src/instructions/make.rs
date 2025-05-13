@@ -59,7 +59,7 @@ impl<'info> Make<'info> {
             mint_a: self.mint_a.key(),
             amount,
             bump: bumps.escrow,
-            reciever: Pubkey::default()
+            receiver: Pubkey::default()
         });
         Ok(())
     }
