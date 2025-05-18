@@ -6,7 +6,9 @@ use anchor_spl::{
         TokenInterface,
         Mint,
         TransferChecked,
-        transfer_checked
+        transfer_checked,
+        close_account,
+        CloseAccount
     }
 };
 
@@ -17,8 +19,11 @@ use crate::state::EscrowState;
 #[derive(Accounts)]
 pub struct Release<'info> {
     #[account(mut)]
-    pub taker: Signer<'info>,               // remains payer
-    #[account(mut, close = maker,
+    pub maker: Signer<'info>,   // remains payer
+    pub receiver: Signer<'info>,
+    #[account( 
+        mut,
+        close = maker,
         has_one = maker,
         has_one = receiver,
         seeds = [b"escrow", escrow.maker.as_ref(), escrow.seed.to_le_bytes().as_ref()],
@@ -26,30 +31,28 @@ pub struct Release<'info> {
     pub escrow: Account<'info, EscrowState>,
 
     /// The account that was set earlier
-    pub receiver: Signer<'info>,
 
     /// Init the ATA for the receiver if needed
     #[account(
         init_if_needed,
-        payer = taker,
+        payer = maker,
         associated_token::mint = mint_a,
         associated_token::authority = receiver,
-        token_program = token_program,
-        associated_token_program = associated_token_program,
+        associated_token::token_program = token_program
     )]
-    pub receiver_ata: Account<'info, TokenAccount>,
+    pub receiver_ata: InterfaceAccount<'info, TokenAccount>,
 
     /// Vault holding tokens
     #[account(
         mut,
         associated_token::mint = mint_a,
         associated_token::authority = escrow,
-        token_program = token_program,
+        associated_token::token_program = token_program,
     )]
-    pub vault: Account<'info, TokenAccount>,
+    pub vault: InterfaceAccount<'info, TokenAccount>,
 
     pub mint_a: InterfaceAccount<'info, Mint>,
-    pub token_program: InterfaceAccount<'info, TokenInterface>,
+    pub token_program: InterfaceAccount<'info, TokenAccount>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
@@ -94,7 +97,7 @@ impl<'info> Release<'info> {
         // Close vault
         let cpi_close = CloseAccount {
             account:     self.vault.to_account_info(),
-            destination: self.taker.to_account_info(),
+            destination: self.receiver.to_account_info(),
             authority:   self.escrow.to_account_info(),
         };
         let cpi_ctx = CpiContext::new_with_signer(
